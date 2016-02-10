@@ -20,7 +20,11 @@
     "producer",
     "rpc",
     "produce",
-    "message"
+    "message",
+    "headers",
+    "properties",
+    "replyTo",
+    "correlationId"
   ],
   "author": "Tejesh Mehta",
   "license": "MIT",
