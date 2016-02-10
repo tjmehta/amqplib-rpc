@@ -1,4 +1,4 @@
-# amqplib-rpc
+# amqplib-rpc [![Build Status](https://travis-ci.org/tjmehta/amqplib-rpc.svg?branch=master)](https://travis-ci.org/tjmehta/amqplib-rpc)
 Thin Amplib utils for RabbitMQ RPC in Node.js. Uses `replyTo` and `correlationId` message properties as the [RabbitMQ rpc tutorial](https://www.rabbitmq.com/tutorials/tutorial-six-javascript.html) suggests.
 
 # Installation

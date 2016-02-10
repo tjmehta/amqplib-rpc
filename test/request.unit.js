@@ -9,6 +9,12 @@ var shimmer = require('shimmer')
 var sinon = require('sinon')
 require('sinon-as-promised')
 
+var bufferMatch = function (a) {
+  return sinon.match(function (b) {
+    return a.toString() === b.toString()
+  })
+}
+
 var lab = exports.lab = Lab.script()
 var describe = lab.describe
 var it = lab.it
@@ -109,7 +115,7 @@ describe('request', function () {
           sinon.assert.calledOnce(ctx.channel.assertQueue)
           sinon.assert.calledWith(ctx.channel.assertQueue, '', { exclusive: true })
           sinon.assert.calledOnce(ctx.channel.sendToQueue)
-          sinon.assert.calledWith(ctx.channel.sendToQueue, ctx.rpcQueueName, ctx.bufferContent, {})
+          sinon.assert.calledWith(ctx.channel.sendToQueue, ctx.rpcQueueName, bufferMatch(ctx.bufferContent), {})
           sinon.assert.calledOnce(ctx.replyPromise)
           sinon.assert.calledWith(ctx.replyPromise, ctx.channel, ctx.replyQueue.queue, { noAck: true })
           done()

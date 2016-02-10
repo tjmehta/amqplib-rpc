@@ -4,6 +4,12 @@ var Lab = require('lab')
 var put = require('101/put')
 var sinon = require('sinon')
 
+var bufferMatch = function (a) {
+  return sinon.match(function (b) {
+    return a.toString() === b.toString()
+  })
+}
+
 var lab = exports.lab = Lab.script()
 var describe = lab.describe
 var it = lab.it
@@ -84,7 +90,7 @@ describe('reply', function () {
       sinon.assert.calledOnce(ctx.channel.sendToQueue)
       sinon.assert.calledWith(ctx.channel.sendToQueue,
         ctx.message.properties.replyTo,
-        ctx.bufferContent,
+        bufferMatch(ctx.bufferContent),
         put(ctx.opts, { correlationId: corrId }))
       done()
     }

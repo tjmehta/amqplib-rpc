@@ -1,7 +1,7 @@
 language: node_js
 node_js:
-  # tests should pass in 0.10 and 0.12 as well,
-  # but the old lab version will misreport the coverages
+  - "0.10"
+  - "0.12"
   - "4"
   - "5"
 sudo: false
