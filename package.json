@@ -1,6 +1,6 @@
 {
   "name": "amqplib-rpc",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Thin Amplib utils for RabbitMQ RPC in Node.js",
   "main": "index.js",
   "scripts": {
