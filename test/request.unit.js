@@ -195,6 +195,7 @@ describe('request', function () {
     describe('timeout error', function () {
       beforeEach(function (done) {
         ctx.err = new Error('boom')
+        ctx.replyPromise.returns(new Promise(function () {}))
         ctx.connection.createChannel.resolves(ctx.channel)
         ctx.channel.assertQueue.resolves(ctx.replyQueue)
         ctx.channel.close.resolves()
