@@ -5,6 +5,8 @@ var proxyquire = require('proxyquire')
 var sinon = require('sinon')
 require('sinon-as-promised')
 
+global.Promise = global.Promise || require('promise-polyfill')
+
 var lab = exports.lab = Lab.script()
 var describe = lab.describe
 var it = lab.it

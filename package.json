@@ -4,7 +4,7 @@
   "description": "Thin Amplib utils for RabbitMQ RPC in Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "lab --verbose --assert code --threshold 90"
+    "test": "lab --verbose --assert code --threshold 100"
   },
   "repository": {
     "type": "git",
@@ -24,7 +24,8 @@
     "headers",
     "properties",
     "replyTo",
-    "correlationId"
+    "correlationId",
+    "timeout"
   ],
   "author": "Tejesh Mehta",
   "license": "MIT",
@@ -35,7 +36,8 @@
   "devDependencies": {
     "amqplib": ">=0.2.1",
     "code": "^1.5.0",
-    "lab": "^5.18.1",
+    "lab": "tjmehta/lab#lab5-coverage-fix",
+    "promise-polyfill": "^3.1.0",
     "proxyquire": "^1.7.4",
     "shimmer": "^1.1.0",
     "sinon": "^1.17.3",
@@ -48,6 +50,7 @@
     "call-me-maybe": "^1.0.1",
     "cast-buffer": "^1.1.0",
     "first-event": "^1.0.0",
+    "timeout-then": "^1.0.0",
     "uuid": "^2.0.1"
   }
 }
