@@ -15,6 +15,7 @@ Make an rpc request, publish a message to an rpc queue. Automatically creates a 
   * @param  {String}   queue     name of rpc-queue to send the message to
   * @param  {Buffer}   content   message content
   * @param  {Object}   [opts]  sendToQueue options
+  * @param  {Object}   [opts.timeout]  timeout in ms, will reject w/ TimeoutError, default: undefined (no timeout)
   * @param  {Object}   [opts.sendOpts]  sendToQueue options
   * @param  {Object}   [opts.queueOpts] assertQueue options for replyTo queue, queueOpts.exclusive defaults to true
   * @param  {Object}   [opts.consumeOpts] consume options for replyTo queue, consumeOpts defaults to true
@@ -48,6 +49,39 @@ amqplib.connect(function (err, connection) {
     console.log(replyMessage.content.toString()) // 200
   })
 })
+
+// Timeout Error example
+var amqplib = require('amqplib')
+var request = require('amqplib-rpc').request
+var TimeoutError = require('amqplib-rpc').TimeoutError
+
+amqplib.connect().then(function (connection) {
+  return request(connection, 'multiply-queue', { a: 10, b: 20 }, { timeout: 100 })
+    .then(function (replyMessage) {
+      console.log(replyMessage.content.toString()) // 200
+    }).catch(function (err) {
+      console.log(err) // [TimeoutError: 'RPC timed out']
+      console.log(err instanceof TimeoutError) // [TimeoutError: 'RPC timed out']
+      console.log(err.data)
+      /*
+      {
+        timeout: 100
+        queue: 'multiplyQueue',
+        content: { a: 10, b: 20 },
+        opts: { // shows default opts, since none were passed
+          sendOpts: {},
+          queueOpts: {
+            exclusive: true
+          },
+          consumeOpts: {
+            noAck: true
+          }
+        }
+      }
+      */
+    })
+})
+.catch(...)
 ```
 
 ## reply
@@ -81,6 +115,7 @@ amqplib.connect(function (err, connection) {
   })
 })
 ```
+
 
 # Follows RabbitMQ RPC tutorial
 https://www.rabbitmq.com/tutorials/tutorial-six-javascript.html

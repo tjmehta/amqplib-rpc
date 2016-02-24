@@ -9,6 +9,10 @@ var shimmer = require('shimmer')
 var sinon = require('sinon')
 require('sinon-as-promised')
 
+global.Promise = global.Promise || require('promise-polyfill')
+
+var TimeoutError = require('../lib/timeout-error.js')
+
 var bufferMatch = function (a) {
   return sinon.match(function (b) {
     return a.toString() === b.toString()
@@ -184,6 +188,40 @@ describe('request', function () {
               done()
             })
             .catch(done)
+        })
+      })
+    })
+
+    describe('timeout error', function () {
+      beforeEach(function (done) {
+        ctx.err = new Error('boom')
+        ctx.connection.createChannel.resolves(ctx.channel)
+        ctx.channel.assertQueue.resolves(ctx.replyQueue)
+        ctx.channel.close.resolves()
+        ctx.content = 'content'
+        done()
+      })
+
+      it('should yield a timeout error', function (done) {
+        ctx.opts.timeout = 1
+        ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts, function (err) {
+          expect(err).to.exist()
+          expect(err).to.be.an.instanceOf(TimeoutError)
+          expect(err.data).to.deep.equal({
+            queue: ctx.rpcQueueName,
+            content: ctx.content,
+            opts: {
+              timeout: ctx.opts.timeout,
+              sendOpts: {},
+              queueOpts: {
+                exclusive: true
+              },
+              consumeOpts: {
+                noAck: true
+              }
+            }
+          })
+          done()
         })
       })
     })
