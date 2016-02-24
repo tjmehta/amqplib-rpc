@@ -116,9 +116,11 @@ amqplib.connect(function (err, connection) {
 })
 ```
 
-
 # Follows RabbitMQ RPC tutorial
 https://www.rabbitmq.com/tutorials/tutorial-six-javascript.html
+
+# Changelog
+[CHANGELOG.md](https://github.com/tjmehta/amqplib-rpc/blob/master/CHANGELOG.md)
 
 # License
 MIT
