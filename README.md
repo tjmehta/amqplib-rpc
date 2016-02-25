@@ -105,121 +105,125 @@ amqplib.connect(function (err, connection) {
 ```
 
 ## reply
-Make an rpc request, publish a message to an rpc queue. Creates a channel, checks `replyTo` queue exists, and replies to a message using `properties.replyTo` and `properties.correlationId`.
+Reply to an rpc request, publish a message to replyTo queue. Replies to a message using `properties.replyTo` and `properties.correlationId`. Reply will NOT error if the "replyTo" queue does not exist, if you need it to use `checkReplyTo` (example below).
 ```js
 /**
- * @param  {AmqplibConnection} amqplib connection on which to create channel and reply on
+ * @param  {AmqplibChannel} channel on which the message was recieved
  * @param  {Object} message incoming message on channel
  * @param  {Buffer|Object|Array|String} content message content
- * @param  {Object} [opts] sendToQueue options
- * @param  {Function} [cb] optional callback
- * @return {Promise}  returns a promise, only if using promise api
+ * @param  {Object} opts publish options
  */
 ```
 ##### reply example, rpc server
 ```js
-// Promise api example
-var amqplib = require('amqplib/callback_api')
-var reply = require('amqplib-rpc').reply
-
-amqplib.connect().then(function (connection) {
-  return connection.createChannel().then(function (channel) {
-    channel.consume('multiply-queue', messageHandler, function (err) {
-      if (err) throw err
-    })
-    function messageHandler (message) {
-      var json = JSON.parse(message.content.toString())
-      var content = json.a * json.b // gets converted to buffer automatically
-      var opts = {} // optional
-      // RPC reply
-      return reply(connection, message, content, opts).then(function () {
-        // message sent successfully
-      })
-    }
-  })
-}).catch(...)
-
-// Callback api example
 var amqplib = require('amqplib/callback_api')
 var reply = require('amqplib-rpc').reply
 
 amqplib.connect(function (err, connection) {
   if (err) throw err
-  connection.createChannel(function (err, channel) {
-    channel.consume('multiply-queue', messageHandler, function (err) {
+  connection.createChannel(function (err, consumerChannel) {
+    if (err) throw err
+    connection.createChannel(function (err, publisherChannel) {
       if (err) throw err
-    })
-    function messageHandler (message) {
-      var json = JSON.parse(message.content.toString())
-      var content = json.a * json.b // gets converted to buffer automatically
-      var opts = {} // optional
-      // RPC reply
-      reply(connection, message, content, opts, function (err) {
+      consumerChannel.consume('multiply-queue', messageHandler, function (err) {
         if (err) throw err
-        // message sent successfully
       })
-    }
+      function messageHandler (message) {
+        var json = JSON.parse(message.content.toString())
+        var content = json.a * json.b // gets converted to buffer automatically
+        var opts = {} // optional
+        // RPC reply
+        reply(publisherChannel, message, content, opts)
+      }
+    })
   })
 })
+```
 
-// Queue Not Found Error example
-// occurs if replyTo queue has been deleted
+## checkReplyQueue
+Create a channel, check if replyTo queue exists, and close the channel.
+`checkReplyQueue` creates it's own channel, bc checking for a non-existant queue errors and closes the channel.
+```js
+/**
+ * @param  {AmqpblibConnection}   connection amqplib rabbitmq connection
+ * @param  {Object}   message    request queue message
+ * @param  {Function} [cb]       not required if using promises
+ * @return {Promise}  if using promises
+ */
+```
+##### checkReplyQueue before reply example, rpc server
+```js
 var amqplib = require('amqplib/callback_api')
 var reply = require('amqplib-rpc').reply
-var QueueNotFoundError = require('amqplib-rpc').QueueNotFoundError
+var checkReplyQueue = require('amqplib-rpc').checkReplyQueue
+var QueueNotFound = require('amqplib-rpc').QueueNotFound
 
 amqplib.connect(function (err, connection) {
   if (err) throw err
-  connection.createChannel(function (err, channel) {
-    channel.consume('multiply-queue', messageHandler, function (err) {
-      if (err) throw err // else consumer messageHandler is set
+  connection.createChannel(function (err, consumerChannel) {
+    if (err) throw err
+    connection.createChannel(function (err, publisherChannel) {
+      if (err) throw err
+      consumerChannel.consume('multiply-queue', messageHandler, function (err) {
+        if (err) throw err
+      })
+      function messageHandler (message) {
+        var json = JSON.parse(message.content.toString())
+        var content = json.a * json.b // gets converted to buffer automatically
+        var opts = {} // optional
+        // Check replyTo queue exists
+        checkReplyQueue(connection, message, function (err) {
+          if (err) {
+            if (err instanceof QueueNotFound) {
+              // "replyTo" queue no longer exists
+              // ack, nack, or etc.
+              return
+            }
+            throw err
+          }
+          // RPC reply
+          reply(publisherChannel, message, content, opts)
+        })
+      }
     })
-    function messageHandler (message) {
-      var json = JSON.parse(message.content.toString())
-      var content = json.a * json.b // gets converted to buffer automatically
-      var opts = {} // optional
-      // RPC reply
-      reply(connection, message, content, opts, function (err) {
-        console.log(err) // [QueueNotFoundError: 'rpc timed out']
-        console.log(err instanceof QueueNotFoundError) // true
-        console.log(err.data)
-        /*
-        {
-          queue: '<replyTo queue name>',
-          correlationId: '<rpc correlation id>',
-          message: {..request message..},
-          content: 200, // response content: json.a * json.b
-          opts: {..reply opts..}
+  })
+})
+```
+
+## checkQueue
+Create a channel, check if the queue exists, and close the channel. This is not rpc related but was implemented for `checkReplyQueue`, so I've exported it.
+In some cases, it may be useful to check if a queue exists before publishing to it.
+```js
+/*
+ * @param  {AmqpblibConnection}   connection amqplib rabbitmq connection
+ * @param  {String}   queue    queue name
+ * @param  {Function} [cb]     callback, not required if using promises
+ * @return {Promise}  if using promises
+ */
+```
+##### checkReplyQueue before reply example, rpc server
+```js
+var amqplib = require('amqplib/callback_api')
+var reply = require('amqplib-rpc').reply
+var checkQueue = require('amqplib-rpc').checkQueue
+var QueueNotFound = require('amqplib-rpc').QueueNotFound
+
+amqplib.connect(function (err, connection) {
+  if (err) throw err
+  connection.createChannel(function (err, publisherChannel) {
+    if (err) throw err
+    // Check replyTo queue exists
+    checkQueue(connection, 'some-queue', function (err) {
+      if (err) {
+        if (err instanceof QueueNotFound) {
+          // queue does not exist, do something special
+          return
         }
-        */
-      })
-    }
-  })
-})
-
-// Channel Close Error example
-// occurs if replyTo queue has been deleted
-var amqplib = require('amqplib/callback_api')
-var reply = require('amqplib-rpc').reply
-var ChannelCloseError = require('amqplib-rpc').ChannelCloseError
-
-amqplib.connect(function (err, connection) {
-  if (err) throw err
-  connection.createChannel(function (err, channel) {
-    channel.consume('multiply-queue', messageHandler, function (err) {
-      if (err) throw err // else consumer messageHandler is set
-    })
-    function messageHandler (message) {
-      var json = JSON.parse(message.content.toString())
-      var content = json.a * json.b // gets converted to buffer automatically
-      var opts = {} // optional
+        throw err
+      }
       // RPC reply
-      reply(connection, message, content, opts, function (err) {
-        console.log(err) // [ChannelCloseError: 'rpc channel closed before publishing the response message']
-        console.log(err instanceof ChannelCloseError) // true
-        console.log(err.data) // same as ChannelCloseError example above
-      })
-    }
+      reply(publisherChannel, message, content, opts)
+    })
   })
 })
 ```

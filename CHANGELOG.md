@@ -1,5 +1,20 @@
 # amqplib-rpc changelog
 
+# 2.0.0
+* reply
+  * Reverted to 0.2.0 behavior, it was more flexible, and more useful in majority of use cases
+  * Broke out checkQueue into it's own helper
+* checkReplyQueue
+  * Initial implementation
+* checkQueue
+  * Initial implementation
+* TimeoutError
+  * Fixed missing message
+* QueueNotFoundError
+  * Fixed missing message
+* Readme
+  * New examples
+
 # 1.0.0
 * reply
   * Breaking changes! `reply` is now an async method (supports cb and promise apis)
