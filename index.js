@@ -4,6 +4,5 @@ module.exports = {
   checkReplyQueue: require('./lib/check-reply-queue.js'),
   checkQueue: require('./lib/check-queue.js'),
   TimeoutError: require('./lib/errors/timeout-error.js'),
-  ChannelCloseError: require('./lib/errors/channel-close-error.js'),
-  QueueNotFoundError: require('./lib/errors/queue-not-found-error.js')
+  ChannelCloseError: require('./lib/errors/channel-close-error.js')
 }
