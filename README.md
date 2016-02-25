@@ -171,15 +171,13 @@ amqplib.connect(function (err, connection) {
         var json = JSON.parse(message.content.toString())
         var content = json.a * json.b // gets converted to buffer automatically
         var opts = {} // optional
-        // Check replyTo queue exists
-        checkReplyQueue(connection, message, function (err) {
-          if (err) {
-            if (err instanceof QueueNotFound) {
-              // "replyTo" queue no longer exists
-              // ack, nack, or etc.
-              return
-            }
-            throw err
+        // Check replyTo queue exists, note: also support promise api
+        checkReplyQueue(connection, message, function (err, exists) {
+          if (err) throw err
+          if (!exists) {
+            // "replyTo" queue no longer exists
+            // ack, nack, or etc.
+            return
           }
           // RPC reply
           reply(publisherChannel, message, content, opts)
@@ -213,14 +211,12 @@ amqplib.connect(function (err, connection) {
   connection.createChannel(function (err, channel) {
     if (err) throw err
     var queue = 'some-queue'
-    // Check replyTo queue exists
-    checkQueue(connection, queue, function (err) {
-      if (err) {
-        if (err instanceof QueueNotFound) {
-          // queue does not exist, do something special
-          return
-        }
-        throw err
+    // Check replyTo queue exists, note: also support promise api
+    checkQueue(connection, queue, function (err, exists) {
+      if (err) throw err
+      if (!exists) {
+        // queue does not exist, do something special
+        return
       }
       // publish message to queue
       channel.sendToQueue(queue, content)

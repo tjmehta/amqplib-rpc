@@ -52,7 +52,6 @@
     "first-event": "^1.0.0",
     "throw-next-tick": "^0.1.0",
     "timeout-then": "^1.0.0",
-    "utils-error-to-json": "^1.0.0",
     "uuid": "^2.0.1"
   }
 }

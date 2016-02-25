@@ -3,12 +3,10 @@ var EventEmitter = require('events').EventEmitter
 var Channel = require('amqplib/lib/channel_model').Channel
 var Code = require('code')
 var Connection = require('amqplib/lib/channel_model').ChannelModel
-var errToJSON = require('utils-error-to-json')
 var Lab = require('lab')
 // var put = require('101/put')
 var proxyquire = require('proxyquire')
 var ChannelCloseError = require('../lib/errors/channel-close-error.js')
-var QueueNotFoundError = require('../lib/errors/queue-not-found-error.js')
 var shimmer = require('shimmer')
 var sinon = require('sinon')
 require('sinon-as-promised')
@@ -58,14 +56,14 @@ describe('checkQueue', function () {
     beforeEach(function (done) {
       ctx.connection.createChannel.resolves(ctx.channel)
       ctx.channel.checkQueue.resolves()
-      ctx.ret = true
       ctx.channel.close.resolves()
       done()
     })
 
     describe('promise api', function () {
       it('should check the replyTo queue', function (done) {
-        ctx.checkQueue(ctx.connection, ctx.queue).then(function () {
+        ctx.checkQueue(ctx.connection, ctx.queue).then(function (ret) {
+          expect(ret).to.equal(true)
           sinon.assert.calledOnce(ctx.connection.createChannel)
           sinon.assert.calledOnce(ctx.first)
           sinon.assert.calledWith(ctx.first, ctx.channel, ['error', 'close'])
@@ -80,6 +78,7 @@ describe('checkQueue', function () {
     describe('callback api', function () {
       it('should check if the queue exists', function (done) {
         ctx.checkQueue(ctx.connection, ctx.queue, function (err, ret) {
+          expect(ret).to.equal(true)
           expect(err).to.not.exist()
           sinon.assert.calledOnce(ctx.connection.createChannel)
           sinon.assert.calledOnce(ctx.first)
@@ -112,18 +111,9 @@ describe('checkQueue', function () {
             done()
           })
 
-          it('should yield QueueNotFoundError', function (done) {
-            ctx.checkQueue(ctx.connection, ctx.queue).then(function () {
-              done(new Error('expected an error'))
-            }).catch(function (err) {
-              expect(err).to.exist()
-              expect(err).to.be.an.instanceOf(QueueNotFoundError)
-              expect(err.message).to.equal('queue not found')
-              expect(err.data).to.deep.equal({
-                queue: ctx.queue,
-                err: errToJSON(ctx.err)
-              })
-              sinon.assert.notCalled(ctx.channel.close)
+          it('should yield false', function (done) {
+            ctx.checkQueue(ctx.connection, ctx.queue).then(function (val) {
+              expect(val).to.equal(false)
               done()
             }).catch(done)
           })

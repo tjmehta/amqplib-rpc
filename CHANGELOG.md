@@ -1,5 +1,13 @@
 # amqplib-rpc changelog
 
+# 2.0.1
+* checkReplyQueue
+  * Now yields exists (boolean)
+* checkQueue
+  * Now yields exists (boolean)
+* QueueNotFoundError
+  * Removed
+
 # 2.0.0
 * reply
   * Breaking changes! Reverted to 0.2.0 behavior, it was more flexible, and more useful in majority of use cases
