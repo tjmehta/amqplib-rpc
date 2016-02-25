@@ -5,13 +5,15 @@ var Code = require('code')
 var Connection = require('amqplib/lib/channel_model').ChannelModel
 var Lab = require('lab')
 var proxyquire = require('proxyquire')
+var put = require('101/put')
 var shimmer = require('shimmer')
 var sinon = require('sinon')
 require('sinon-as-promised')
 
 global.Promise = global.Promise || require('promise-polyfill')
 
-var TimeoutError = require('../lib/timeout-error.js')
+var ChannelCloseError = require('../lib/errors/channel-close-error.js')
+var TimeoutError = require('../lib/errors/timeout-error.js')
 
 var bufferMatch = function (a) {
   return sinon.match(function (b) {
@@ -30,33 +32,45 @@ describe('request', function () {
 
   beforeEach(function (done) {
     ctx = {}
-    ctx.replyPromise = sinon.stub()
+    ctx.corrId = 1
+    ctx.uuid = sinon.stub().returns(ctx.corrId)
     ctx.request = proxyquire('../lib/request.js', {
-      './reply-promise.js': ctx.replyPromise
+      'uuid': ctx.uuid
     })
     // stubbed connection
     ctx.connection = new Connection(new EventEmitter())
     sinon.stub(ctx.connection, 'createChannel')
     // stubbed channel
-    ctx.replyQueue = { queue: 'replyQueueName' }
     ctx.channel = new Channel()
     sinon.stub(ctx.channel, 'assertQueue')
+    sinon.stub(ctx.channel, 'consume')
     sinon.stub(ctx.channel, 'sendToQueue')
     sinon.stub(ctx.channel, 'close')
     // queue args
     ctx.rpcQueueName = 'rpc-queue'
-    ctx.opts = {}
+    ctx.opts = {
+      sendOpts: { foo: 1 },
+      queueOpts: { bar: 1 },
+      consumeOpts: { qux: 1 }
+    }
+    ctx.replyQueue = { queue: 'replyQueueName' }
     done()
   })
 
   describe('success', function () {
-    describe('amqplib promise api', function () {
+    describe('callback api', function () {
       beforeEach(function (done) {
-        ctx.replyMessage = {}
-        ctx.replyPromise.resolves(ctx.replyMessage)
         ctx.connection.createChannel.resolves(ctx.channel)
         ctx.channel.assertQueue.resolves(ctx.replyQueue)
-        ctx.channel.sendToQueue.resolves()
+        ctx.resMessage = {
+          properties: {
+            correlationId: ctx.corrId
+          },
+          content: new Buffer('response')
+        }
+        ctx.channel.consume
+          .resolves()
+          .callsArgWithAsync(1, ctx.resMessage)
         ctx.channel.close.resolves()
         done()
       })
@@ -112,16 +126,20 @@ describe('request', function () {
       })
 
       function assertSuccess (done) {
-        ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts, function (err, replyMessage) {
+        ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts, function (err, resMessage) {
           if (err) { return done(err) }
-          expect(replyMessage).to.equal(ctx.replyMessage)
+          expect(resMessage).to.equal(ctx.resMessage)
           sinon.assert.calledOnce(ctx.connection.createChannel)
           sinon.assert.calledOnce(ctx.channel.assertQueue)
-          sinon.assert.calledWith(ctx.channel.assertQueue, '', { exclusive: true })
+          sinon.assert.calledWith(ctx.channel.assertQueue,
+            '', put(ctx.opts.queueOpts, { exclusive: true }))
+          sinon.assert.calledOnce(ctx.channel.consume)
+          sinon.assert.calledWith(ctx.channel.consume,
+            ctx.replyQueue.queue, sinon.match.func, put(ctx.opts.consumeOpts, { noAck: true }))
           sinon.assert.calledOnce(ctx.channel.sendToQueue)
-          sinon.assert.calledWith(ctx.channel.sendToQueue, ctx.rpcQueueName, bufferMatch(ctx.bufferContent), {})
-          sinon.assert.calledOnce(ctx.replyPromise)
-          sinon.assert.calledWith(ctx.replyPromise, ctx.channel, ctx.replyQueue.queue, { noAck: true })
+          sinon.assert.calledWith(ctx.channel.sendToQueue,
+            ctx.rpcQueueName, bufferMatch(ctx.bufferContent), ctx.opts.sendOpts)
+          sinon.assert.calledOnce(ctx.channel.close)
           done()
         })
       }
@@ -142,7 +160,7 @@ describe('request', function () {
       })
     })
 
-    describe('createChannel error', function () {
+    describe('assertQueue error', function () {
       beforeEach(function (done) {
         ctx.err = new Error('boom')
         ctx.connection.createChannel.resolves(ctx.channel)
@@ -152,7 +170,7 @@ describe('request', function () {
         done()
       })
 
-      it('should close connection yield error', function (done) {
+      it('should close connection and yield error', function (done) {
         ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts)
           .then(function () {
             done(new Error('expected an error'))
@@ -165,26 +183,36 @@ describe('request', function () {
           .catch(done)
       })
 
-      describe('channel closed', function () {
+      describe('channel close occurs first', function () {
         beforeEach(function (done) {
           shimmer.wrap(ctx.channel, 'assertQueue', function (orig) {
             return function () {
               var ret = orig.apply(this, arguments)
               // close the channel
-              ctx.channel.emit('exit')
+              ctx.channel.emit('close')
               return ret.then(function () {})
             }
           })
           done()
         })
 
-        it('should yield error (channel already closed)', function (done) {
+        it('should yield error (channel exit error)', function (done) {
           ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts)
             .then(function () {
               done(new Error('expected an error'))
             })
             .catch(function (err) {
-              expect(err).to.equal(ctx.err)
+              expect(err).to.be.an.instanceOf(ChannelCloseError)
+              expect(err.message).to.equal('rpc channel closed before receiving the response message')
+              expect(err.data).to.deep.equal({
+                queue: ctx.rpcQueueName,
+                content: ctx.content,
+                opts: {
+                  sendOpts: ctx.opts.sendOpts,
+                  queueOpts: put(ctx.opts.queueOpts, {exclusive: true}),
+                  consumeOpts: put(ctx.opts.consumeOpts, {noAck: true})
+                }
+              })
               done()
             })
             .catch(done)
@@ -195,9 +223,11 @@ describe('request', function () {
     describe('timeout error', function () {
       beforeEach(function (done) {
         ctx.err = new Error('boom')
-        ctx.replyPromise.returns(new Promise(function () {}))
         ctx.connection.createChannel.resolves(ctx.channel)
         ctx.channel.assertQueue.resolves(ctx.replyQueue)
+        ctx.channel.consume
+          .resolves()
+          .callsArgWithAsync(1, { properties: {} }) // bs message for coeverage
         ctx.channel.close.resolves()
         ctx.content = 'content'
         done()
@@ -205,25 +235,26 @@ describe('request', function () {
 
       it('should yield a timeout error', function (done) {
         ctx.opts.timeout = 1
-        ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts, function (err) {
-          expect(err).to.exist()
-          expect(err).to.be.an.instanceOf(TimeoutError)
-          expect(err.data).to.deep.equal({
-            queue: ctx.rpcQueueName,
-            content: ctx.content,
-            opts: {
-              timeout: ctx.opts.timeout,
-              sendOpts: {},
-              queueOpts: {
-                exclusive: true
-              },
-              consumeOpts: {
-                noAck: true
-              }
-            }
+        ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts)
+          .then(function () {
+            done(new Error('expected an error'))
           })
-          done()
-        })
+          .catch(function (err) {
+            expect(err).to.exist()
+            expect(err).to.be.an.instanceOf(TimeoutError)
+            expect(err.data).to.deep.equal({
+              queue: ctx.rpcQueueName,
+              content: ctx.content,
+              opts: {
+                timeout: ctx.opts.timeout,
+                sendOpts: ctx.opts.sendOpts,
+                queueOpts: put(ctx.opts.queueOpts, {exclusive: true}),
+                consumeOpts: put(ctx.opts.consumeOpts, {noAck: true})
+              }
+            })
+            done()
+          })
+          .catch(done)
       })
     })
   })
