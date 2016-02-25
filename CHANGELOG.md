@@ -2,7 +2,7 @@
 
 # 2.0.0
 * reply
-  * Reverted to 0.2.0 behavior, it was more flexible, and more useful in majority of use cases
+  * Breaking changes! Reverted to 0.2.0 behavior, it was more flexible, and more useful in majority of use cases
   * Broke out checkQueue into it's own helper
 * checkReplyQueue
   * Initial implementation
