@@ -210,10 +210,11 @@ var QueueNotFound = require('amqplib-rpc').QueueNotFound
 
 amqplib.connect(function (err, connection) {
   if (err) throw err
-  connection.createChannel(function (err, publisherChannel) {
+  connection.createChannel(function (err, channel) {
     if (err) throw err
+    var queue = 'some-queue'
     // Check replyTo queue exists
-    checkQueue(connection, 'some-queue', function (err) {
+    checkQueue(connection, queue, function (err) {
       if (err) {
         if (err instanceof QueueNotFound) {
           // queue does not exist, do something special
@@ -221,8 +222,8 @@ amqplib.connect(function (err, connection) {
         }
         throw err
       }
-      // RPC reply
-      reply(publisherChannel, message, content, opts)
+      // publish message to queue
+      channel.sendToQueue(queue, content)
     })
   })
 })
