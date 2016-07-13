@@ -137,8 +137,12 @@ describe('request', function () {
           sinon.assert.calledWith(ctx.channel.consume,
             ctx.replyQueue.queue, sinon.match.func, put(ctx.opts.consumeOpts, { noAck: true }))
           sinon.assert.calledOnce(ctx.channel.sendToQueue)
+          var expectedSendOpts = put(ctx.opts.sendOpts, {
+            correlationId: ctx.corrId,
+            replyTo: ctx.replyQueue.queue
+          })
           sinon.assert.calledWith(ctx.channel.sendToQueue,
-            ctx.rpcQueueName, bufferMatch(ctx.bufferContent), ctx.opts.sendOpts)
+            ctx.rpcQueueName, bufferMatch(ctx.bufferContent), expectedSendOpts)
           sinon.assert.calledOnce(ctx.channel.close)
           done()
         })
