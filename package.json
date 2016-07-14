@@ -45,10 +45,11 @@
     "standard": "^6.0.4"
   },
   "dependencies": {
-    "101": "^1.2.0",
-    "assert-args": "^1.0.5",
+    "101": "^1.6.0",
+    "assert-args": "^1.1.2",
     "call-me-maybe": "^1.0.1",
     "cast-buffer": "^1.1.0",
+    "debug": "^2.2.0",
     "first-event": "^1.0.0",
     "throw-next-tick": "^0.1.0",
     "timeout-then": "^1.0.0",
