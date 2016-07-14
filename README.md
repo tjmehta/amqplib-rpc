@@ -8,7 +8,10 @@ npm i --save amqplib-rpc
 
 # Usage
 ## request
-Make an rpc request, publish a message to an rpc queue. Creates a channel, queue, correlationId, and sets up `properties.replyTo` and `properties.correlationId` on request message.
+Make an rpc request, publish a message to an rpc queue.
+
+* Creates a channel, queue, correlationId, and sets up `properties.replyTo` and `properties.correlationId` on request message.
+
 ```js
 /**
   * @param  {AmqplibConnection}   connection     rabbitmq connection
@@ -105,13 +108,20 @@ amqplib.connect(function (err, connection) {
 ```
 
 ## reply
-Reply to an rpc request, publish a message to replyTo queue. Replies to a message using `properties.replyTo` and `properties.correlationId`. Reply will NOT error if the "replyTo" queue does not exist, if you need it to use `checkReplyTo` (example below).
+Reply to an rpc request, publish a message to replyTo queue.
+
+* Replies to a message using `properties.replyTo` and `properties.correlationId`.
+
+* Reply will NOT error if the "replyTo" queue does not exist, if you need it to use `checkReplyTo` (example below).
+
+* Reply will NOT `ack` the `message`. Ack/Nack must be done manually.
 ```js
 /**
  * @param  {AmqplibChannel} channel on which the message was recieved
  * @param  {Object} message incoming message on channel
  * @param  {Buffer|Object|Array|String} content message content
  * @param  {Object} opts publish options
+ * @return {Boolean} replyWriteSuccess - amqplib docs do not mention this ever failing..
  */
 ```
 ##### reply example, rpc server
@@ -134,6 +144,8 @@ amqplib.connect(function (err, connection) {
         var opts = {} // optional
         // RPC reply
         reply(publisherChannel, message, content, opts)
+        // "ack" message
+        consumerChannel.ack(message)
       }
     })
   })
@@ -181,6 +193,8 @@ amqplib.connect(function (err, connection) {
           }
           // RPC reply
           reply(publisherChannel, message, content, opts)
+          // "ack" message
+          consumerChannel.ack(message)
         })
       }
     })
