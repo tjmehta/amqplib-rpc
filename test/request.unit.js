@@ -44,6 +44,7 @@ describe('request', function () {
     ctx.channel = new Channel()
     sinon.stub(ctx.channel, 'assertQueue')
     sinon.stub(ctx.channel, 'consume')
+    sinon.stub(ctx.channel, 'deleteQueue')
     sinon.stub(ctx.channel, 'sendToQueue')
     sinon.stub(ctx.channel, 'close')
     // queue args
@@ -71,6 +72,7 @@ describe('request', function () {
         ctx.channel.consume
           .resolves()
           .callsArgWithAsync(1, ctx.resMessage)
+        ctx.channel.deleteQueue.resolves()
         ctx.channel.close.resolves()
         done()
       })
@@ -224,6 +226,110 @@ describe('request', function () {
       })
     })
 
+    describe('channel consume error', function () {
+      beforeEach(function (done) {
+        ctx.connection.createChannel.resolves(ctx.channel)
+        ctx.channel.assertQueue.resolves(ctx.replyQueue)
+        ctx.channel.close.resolves()
+        ctx.content = 'content'
+        ctx.consumeErr = new Error('delete boom')
+        ctx.channel.consume.rejects(ctx.consumeErr)
+        done()
+      })
+      describe('delete queue err', function () {
+        beforeEach(function (done) {
+          ctx.deleteErr = new Error('boom')
+          ctx.channel.deleteQueue.rejects(ctx.deleteErr)
+          done()
+        })
+
+        it('should yield a consume error', function (done) {
+          ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts).catch(function (err) {
+            expect(err).to.equal(ctx.consumeErr)
+            done()
+          })
+        })
+      })
+
+      describe('delete success', function () {
+        beforeEach(function (done) {
+          ctx.channel.deleteQueue.resolves()
+          done()
+        })
+
+        it('should yield a consume error', function (done) {
+          ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts).catch(function (err) {
+            expect(err).to.equal(ctx.consumeErr)
+            done()
+          })
+        })
+      })
+    })
+
+    describe('delete queue err', function () {
+      beforeEach(function (done) {
+        ctx.connection.createChannel.resolves(ctx.channel)
+        ctx.channel.assertQueue.resolves(ctx.replyQueue)
+        ctx.resMessage = {
+          properties: {
+            correlationId: ctx.corrId
+          },
+          content: new Buffer('response')
+        }
+        ctx.channel.consume
+          .resolves()
+          .callsArgWithAsync(1, ctx.resMessage)
+        ctx.channel.close.resolves()
+        ctx.err = new Error('boom')
+        ctx.channel.deleteQueue.rejects(ctx.err)
+        done()
+      })
+      beforeEach(function (done) {
+        ctx.content = {}
+        ctx.bufferContent = new Buffer(JSON.stringify({}))
+        done()
+      })
+
+      it('should yield delete error', function (done) {
+        ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts).catch(function (err) {
+          expect(err).to.equal(ctx.err)
+          done()
+        })
+      })
+    })
+
+    describe('close err', function () {
+      beforeEach(function (done) {
+        ctx.connection.createChannel.resolves(ctx.channel)
+        ctx.channel.assertQueue.resolves(ctx.replyQueue)
+        ctx.resMessage = {
+          properties: {
+            correlationId: ctx.corrId
+          },
+          content: new Buffer('response')
+        }
+        ctx.channel.consume
+          .resolves()
+          .callsArgWithAsync(1, ctx.resMessage)
+        ctx.channel.deleteQueue.resolves()
+        ctx.err = new Error('boom')
+        ctx.channel.close.rejects(ctx.err)
+        done()
+      })
+      beforeEach(function (done) {
+        ctx.content = {}
+        ctx.bufferContent = new Buffer(JSON.stringify({}))
+        done()
+      })
+
+      it('should yield close error', function (done) {
+        ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts).catch(function (err) {
+          expect(err).to.equal(ctx.err)
+          done()
+        })
+      })
+    })
+
     describe('timeout error', function () {
       beforeEach(function (done) {
         ctx.err = new Error('boom')
@@ -259,6 +365,38 @@ describe('request', function () {
             done()
           })
           .catch(done)
+      })
+
+      describe('close error', function () {
+        beforeEach(function (done) {
+          ctx.closeErr = new Error('close boom')
+          ctx.channel.close.rejects()
+          done()
+        })
+
+        it('should yield a timeout error', function (done) {
+          ctx.opts.timeout = 1
+          ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts)
+            .then(function () {
+              done(new Error('expected an error'))
+            })
+            .catch(function (err) {
+              expect(err).to.exist()
+              expect(err).to.be.an.instanceOf(TimeoutError)
+              expect(err.data).to.deep.equal({
+                queue: ctx.rpcQueueName,
+                content: ctx.content,
+                opts: {
+                  timeout: ctx.opts.timeout,
+                  sendOpts: ctx.opts.sendOpts,
+                  queueOpts: put(ctx.opts.queueOpts, {exclusive: true}),
+                  consumeOpts: put(ctx.opts.consumeOpts, {noAck: true})
+                }
+              })
+              done()
+            })
+            .catch(done)
+        })
       })
     })
   })

@@ -1,5 +1,10 @@
 # amqplib-rpc changelog
 
+# 2.0.2
+* request
+  * Fix: exclusive queues stay open even after channel close
+  * `request` now manually deletes queue after response is recieved
+
 # 2.0.1
 * checkReplyQueue
   * Now yields exists (boolean)
