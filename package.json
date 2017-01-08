@@ -35,14 +35,14 @@
   "homepage": "https://github.com/tjmehta/amqplib-rpc",
   "devDependencies": {
     "amqplib": ">=0.2.1",
-    "code": "^1.5.0",
+    "code": "^4.0.0",
     "lab": "tjmehta/lab#lab5-coverage-fix",
-    "promise-polyfill": "^3.1.0",
+    "promise-polyfill": "^6.0.2",
     "proxyquire": "^1.7.4",
     "shimmer": "^1.1.0",
     "sinon": "^1.17.3",
     "sinon-as-promised": "^4.0.0",
-    "standard": "^6.0.4"
+    "standard": "^8.6.0"
   },
   "dependencies": {
     "101": "^1.6.0",
@@ -52,7 +52,7 @@
     "debug": "^2.2.0",
     "first-event": "^1.0.0",
     "throw-next-tick": "^0.1.0",
-    "timeout-then": "1.0.0",
-    "uuid": "^2.0.1"
+    "timeout-then": "1.1.0",
+    "uuid": "^3.0.1"
   }
 }
