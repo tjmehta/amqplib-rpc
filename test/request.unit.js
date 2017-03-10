@@ -232,13 +232,13 @@ describe('request', function () {
         ctx.channel.assertQueue.resolves(ctx.replyQueue)
         ctx.channel.close.resolves()
         ctx.content = 'content'
-        ctx.consumeErr = new Error('delete boom')
+        ctx.consumeErr = new Error('consume boom')
         ctx.channel.consume.rejects(ctx.consumeErr)
         done()
       })
       describe('delete queue err', function () {
         beforeEach(function (done) {
-          ctx.deleteErr = new Error('boom')
+          ctx.deleteErr = new Error('delete boom')
           ctx.channel.deleteQueue.rejects(ctx.deleteErr)
           done()
         })
@@ -335,6 +335,7 @@ describe('request', function () {
         ctx.err = new Error('boom')
         ctx.connection.createChannel.resolves(ctx.channel)
         ctx.channel.assertQueue.resolves(ctx.replyQueue)
+        ctx.channel.deleteQueue.resolves()
         ctx.channel.consume
           .resolves()
           .callsArgWithAsync(1, { properties: {} }) // bs message for coeverage
@@ -370,7 +371,7 @@ describe('request', function () {
       describe('close error', function () {
         beforeEach(function (done) {
           ctx.closeErr = new Error('close boom')
-          ctx.channel.close.rejects()
+          ctx.channel.close.rejects(ctx.closeErr)
           done()
         })
 
