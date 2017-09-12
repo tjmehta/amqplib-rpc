@@ -114,13 +114,5 @@ describe('reply', function () {
       }).to.throw(/replyTo/)
       done()
     })
-
-    it('should error if no "correlationId"', function (done) {
-      delete ctx.message.properties.correlationId
-      expect(function () {
-        reply(ctx.channel, ctx.message, ctx.content, ctx.opts)
-      }).to.throw(/correlationId/)
-      done()
-    })
   })
 })
