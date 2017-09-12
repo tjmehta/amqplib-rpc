@@ -1,9 +1,13 @@
 # amqplib-rpc changelog
 
+# 3.0.0
+* reply
+  * Breaking changes! remove correlationId requirement in replies
+
 # 2.0.3
 * request
   * Fix: exclusive queues stay open even after channel close
-  * `request` now manually deletes queue after response is recieved
+  * `request` now manually deletes queue after response is received
 
 # 2.0.2
 * request
