@@ -80,10 +80,17 @@ describe('reply', function () {
         done()
       })
       it('should reply to a request', assertSuccess)
+      it('should reply to a request without correlationId', (done) => {
+        delete ctx.message.properties.correlationId
+        assertSuccess(done)
+      })
     })
 
     function assertSuccess (done) {
       var corrId = ctx.message.properties.correlationId
+      var expectedOpts = (corrId)
+        ? put(ctx.opts, { correlationId: corrId })
+        : ctx.opts
       expect(
         reply(ctx.channel, ctx.message, ctx.content, ctx.opts)
       ).to.equal(ctx.ret)
@@ -91,7 +98,8 @@ describe('reply', function () {
       sinon.assert.calledWith(ctx.channel.sendToQueue,
         ctx.message.properties.replyTo,
         bufferMatch(ctx.bufferContent),
-        put(ctx.opts, { correlationId: corrId }))
+        expectedOpts
+      )
       done()
     }
   })
