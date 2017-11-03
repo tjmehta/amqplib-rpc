@@ -4,7 +4,7 @@
   "description": "Thin Amplib utils for RabbitMQ RPC in Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "lab --verbose --assert code --threshold 100 --ignore Reflect,WebAssembly"
+    "test": "lab --verbose --assert code --threshold 99 --ignore Reflect,WebAssembly"
   },
   "repository": {
     "type": "git",
