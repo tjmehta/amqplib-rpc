@@ -59,21 +59,30 @@ describe('request', function () {
   })
 
   describe('success', function () {
-    describe('callback api', function () {
+    describe.only('callback api', function () {
       beforeEach(function (done) {
-        ctx.connection.createChannel.resolves(ctx.channel)
-        ctx.channel.assertQueue.resolves(ctx.replyQueue)
+        ctx.connection.createChannel.yieldsAsync(null, ctx.channel)
+        ctx.channel.assertQueue.yieldsAsync(null, ctx.replyQueue)
         ctx.resMessage = {
           properties: {
             correlationId: ctx.corrId
           },
           content: new Buffer('response')
         }
-        ctx.channel.consume
-          .resolves()
-          .callsArgWithAsync(1, ctx.resMessage)
-        ctx.channel.deleteQueue.resolves()
-        ctx.channel.close.resolves()
+        ctx.channel.consume = sinon.spy(function (queue, handler, opts, cb) {
+          cb()
+          handler(ctx.resMessage)
+        })
+        ctx.channel.deleteQueue.yieldsAsync()
+        ctx.channel.close.yieldsAsync()
+        ctx.stubs = {
+          createChannel: ctx.connection.createChannel,
+          assertQueue: ctx.channel.assertQueue,
+          consume: ctx.channel.consume,
+          sendToQueue: ctx.channel.sendToQueue,
+          deleteQueue: ctx.channel.deleteQueue,
+          close: ctx.channel.close
+        }
         done()
       })
 
@@ -131,21 +140,21 @@ describe('request', function () {
         ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts, function (err, resMessage) {
           if (err) { return done(err) }
           expect(resMessage).to.equal(ctx.resMessage)
-          sinon.assert.calledOnce(ctx.connection.createChannel)
-          sinon.assert.calledOnce(ctx.channel.assertQueue)
-          sinon.assert.calledWith(ctx.channel.assertQueue,
+          sinon.assert.calledOnce(ctx.stubs.createChannel)
+          sinon.assert.calledOnce(ctx.stubs.assertQueue)
+          sinon.assert.calledWith(ctx.stubs.assertQueue,
             '', put(ctx.opts.queueOpts, { exclusive: true }))
-          sinon.assert.calledOnce(ctx.channel.consume)
-          sinon.assert.calledWith(ctx.channel.consume,
+          sinon.assert.calledOnce(ctx.stubs.consume)
+          sinon.assert.calledWith(ctx.stubs.consume,
             ctx.replyQueue.queue, sinon.match.func, put(ctx.opts.consumeOpts, { noAck: true }))
-          sinon.assert.calledOnce(ctx.channel.sendToQueue)
+          sinon.assert.calledOnce(ctx.stubs.sendToQueue)
           var expectedSendOpts = put(ctx.opts.sendOpts, {
             correlationId: ctx.corrId,
             replyTo: ctx.replyQueue.queue
           })
-          sinon.assert.calledWith(ctx.channel.sendToQueue,
+          sinon.assert.calledWith(ctx.stubs.sendToQueue,
             ctx.rpcQueueName, bufferMatch(ctx.bufferContent), expectedSendOpts)
-          sinon.assert.calledOnce(ctx.channel.close)
+          sinon.assert.calledOnce(ctx.stubs.close)
           done()
         })
       }
@@ -170,6 +179,7 @@ describe('request', function () {
       beforeEach(function (done) {
         ctx.err = new Error('boom')
         ctx.connection.createChannel.resolves(ctx.channel)
+        ctx.channel.assertQueue.rejects(ctx.err)
         ctx.channel.assertQueue.rejects(ctx.err)
         ctx.channel.close.resolves()
         ctx.content = 'content'
@@ -226,6 +236,43 @@ describe('request', function () {
       })
     })
 
+    describe('queue deleted', function () {
+      beforeEach(function (done) {
+        ctx.connection.createChannel.resolves(ctx.channel)
+        ctx.channel.assertQueue.resolves(ctx.replyQueue)
+        ctx.resMessage = {
+          properties: {
+            correlationId: ctx.corrId
+          },
+          content: new Buffer('response')
+        }
+        var _handler
+        ctx.channel.consume = sinon.spy(function (queue, handler, opts, cb) {
+          _handler = handler
+          return Promise.resolve()
+        })
+        ctx.channel.sendToQueue = sinon.spy(function () {
+          _handler(ctx.resMessage)
+          return Promise.resolve()
+        })
+        ctx.channel.deleteQueue = sinon.spy(function () {
+          _handler(null)
+          return Promise.resolve()
+        })
+        ctx.channel.close.resolves()
+        ctx.content = 'content'
+        done()
+      })
+
+      describe('delete queue real behavior', function () {
+        it('should call message handler twice', function (done) {
+          ctx.request(ctx.connection, ctx.rpcQueueName, ctx.content, ctx.opts).then(function () {
+            done()
+          })
+        })
+      })
+    })
+
     describe('channel consume error', function () {
       beforeEach(function (done) {
         ctx.connection.createChannel.resolves(ctx.channel)
@@ -236,6 +283,7 @@ describe('request', function () {
         ctx.channel.consume.rejects(ctx.consumeErr)
         done()
       })
+
       describe('delete queue err', function () {
         beforeEach(function (done) {
           ctx.deleteErr = new Error('delete boom')
