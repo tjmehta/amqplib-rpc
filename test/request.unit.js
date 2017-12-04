@@ -45,7 +45,7 @@ describe('request', function () {
     sinon.stub(ctx.channel, 'assertQueue')
     sinon.stub(ctx.channel, 'consume')
     sinon.stub(ctx.channel, 'deleteQueue')
-    sinon.stub(ctx.channel, 'sendToQueue')
+    sinon.stub(ctx.channel, 'publish')
     sinon.stub(ctx.channel, 'close')
     // queue args
     ctx.rpcQueueName = 'rpc-queue'
@@ -138,13 +138,13 @@ describe('request', function () {
           sinon.assert.calledOnce(ctx.channel.consume)
           sinon.assert.calledWith(ctx.channel.consume,
             ctx.replyQueue.queue, sinon.match.func, put(ctx.opts.consumeOpts, { noAck: true }))
-          sinon.assert.calledOnce(ctx.channel.sendToQueue)
+          sinon.assert.calledOnce(ctx.channel.publish)
           var expectedSendOpts = put(ctx.opts.sendOpts, {
             correlationId: ctx.corrId,
             replyTo: ctx.replyQueue.queue
           })
-          sinon.assert.calledWith(ctx.channel.sendToQueue,
-            ctx.rpcQueueName, bufferMatch(ctx.bufferContent), expectedSendOpts)
+          sinon.assert.calledWith(ctx.channel.publish,
+            '', ctx.rpcQueueName, bufferMatch(ctx.bufferContent), expectedSendOpts)
           sinon.assert.calledOnce(ctx.channel.close)
           done()
         })
@@ -216,7 +216,8 @@ describe('request', function () {
                 opts: {
                   sendOpts: ctx.opts.sendOpts,
                   queueOpts: put(ctx.opts.queueOpts, {exclusive: true}),
-                  consumeOpts: put(ctx.opts.consumeOpts, {noAck: true})
+                  consumeOpts: put(ctx.opts.consumeOpts, {noAck: true}),
+                  exchangeName: ''
                 }
               })
               done()
@@ -360,7 +361,8 @@ describe('request', function () {
                 timeout: ctx.opts.timeout,
                 sendOpts: ctx.opts.sendOpts,
                 queueOpts: put(ctx.opts.queueOpts, {exclusive: true}),
-                consumeOpts: put(ctx.opts.consumeOpts, {noAck: true})
+                consumeOpts: put(ctx.opts.consumeOpts, {noAck: true}),
+                exchangeName: ''
               }
             })
             done()
@@ -391,7 +393,8 @@ describe('request', function () {
                   timeout: ctx.opts.timeout,
                   sendOpts: ctx.opts.sendOpts,
                   queueOpts: put(ctx.opts.queueOpts, {exclusive: true}),
-                  consumeOpts: put(ctx.opts.consumeOpts, {noAck: true})
+                  consumeOpts: put(ctx.opts.consumeOpts, {noAck: true}),
+                  exchangeName: ''
                 }
               })
               done()
