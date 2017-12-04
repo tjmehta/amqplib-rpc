@@ -4,6 +4,11 @@ var Lab = require('lab')
 var put = require('101/put')
 var sinon = require('sinon')
 
+var createBuffer = function (str) {
+  return Buffer.from
+    ? Buffer.from(str)
+    : createBuffer(str)
+}
 var bufferMatch = function (a) {
   return sinon.match(function (b) {
     return a.toString() === b.toString()
@@ -40,7 +45,7 @@ describe('reply', function () {
     describe('object content', function () {
       beforeEach(function (done) {
         ctx.content = {}
-        ctx.bufferContent = new Buffer(JSON.stringify({}))
+        ctx.bufferContent = createBuffer(JSON.stringify({}))
         done()
       })
       it('should reply to a request', assertSuccess)
@@ -49,7 +54,7 @@ describe('reply', function () {
     describe('array content', function () {
       beforeEach(function (done) {
         ctx.content = []
-        ctx.bufferContent = new Buffer(JSON.stringify([]))
+        ctx.bufferContent = createBuffer(JSON.stringify([]))
         done()
       })
       it('should reply to a request', assertSuccess)
@@ -58,7 +63,7 @@ describe('reply', function () {
     describe('string content', function () {
       beforeEach(function (done) {
         ctx.content = 'content'
-        ctx.bufferContent = new Buffer('content')
+        ctx.bufferContent = createBuffer('content')
         done()
       })
       it('should reply to a request', assertSuccess)
@@ -67,7 +72,7 @@ describe('reply', function () {
     describe('number content', function () {
       beforeEach(function (done) {
         ctx.content = 22
-        ctx.bufferContent = new Buffer('22')
+        ctx.bufferContent = createBuffer('22')
         done()
       })
       it('should reply to a request', assertSuccess)
@@ -75,7 +80,7 @@ describe('reply', function () {
 
     describe('buffer content', function () {
       beforeEach(function (done) {
-        ctx.content = new Buffer('content')
+        ctx.content = createBuffer('content')
         ctx.bufferContent = ctx.content
         done()
       })

@@ -1,5 +1,10 @@
 # amqplib-rpc changelog
 
+# 3.1.0
+* request
+  * Feature: added optional exchangeName option
+  * Fix: tests use Buffer.from instead of new Buffer
+
 # 3.0.0
 * reply
   * Breaking changes! remove correlationId requirement in replies

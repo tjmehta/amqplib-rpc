@@ -52,7 +52,8 @@ describe('request', function () {
     ctx.opts = {
       sendOpts: { foo: 1 },
       queueOpts: { bar: 1 },
-      consumeOpts: { qux: 1 }
+      consumeOpts: { qux: 1 },
+      exchangeName: null
     }
     ctx.replyQueue = { queue: 'replyQueueName' }
     done()
@@ -117,11 +118,11 @@ describe('request', function () {
         })
         it('should make a request and recieve a reply', assertSuccess)
       })
-
-      describe('callback api', function () {
+      describe('optional exchange name', function () {
         beforeEach(function (done) {
           ctx.content = new Buffer('content')
           ctx.bufferContent = ctx.content
+          ctx.opts.exchangeName = 'exchangeName'
           done()
         })
         it('should make a request and recieve a reply', assertSuccess)
@@ -143,8 +144,14 @@ describe('request', function () {
             correlationId: ctx.corrId,
             replyTo: ctx.replyQueue.queue
           })
-          sinon.assert.calledWith(ctx.channel.publish,
-            '', ctx.rpcQueueName, bufferMatch(ctx.bufferContent), expectedSendOpts)
+          if (ctx.opts.exchangeName) {
+            console.log('exchangeName:', ctx.opts.exchangeName)
+            sinon.assert.calledWith(ctx.channel.publish,
+              ctx.opts.exchangeName, ctx.rpcQueueName, bufferMatch(ctx.bufferContent), expectedSendOpts)
+          } else {
+            sinon.assert.calledWith(ctx.channel.publish,
+              '', ctx.rpcQueueName, bufferMatch(ctx.bufferContent), expectedSendOpts)
+          }
           sinon.assert.calledOnce(ctx.channel.close)
           done()
         })

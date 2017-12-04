@@ -21,7 +21,8 @@ Make an rpc request, publish a message to an rpc queue.
   * @param  {Object}   [opts.timeout]  timeout in ms, will reject w/ TimeoutError, default: undefined (no timeout)
   * @param  {Object}   [opts.sendOpts]  sendToQueue options
   * @param  {Object}   [opts.queueOpts] assertQueue options for replyTo queue, queueOpts.exclusive defaults to true
-  * @param  {Object}   [opts.consumeOpts] consume options for replyTo queue, consumeOpts defaults to true
+  * @param  {Object}   [opts.consumeOpts] consume options for replyTo queue, consumeOpts defaults to ''
+  * @param  {Object}   [opts.exchangeName] exchange name for request, exchangeName defaults to default exchange ('')
   * @param  {Function} [cb] optional callback, if using callback api
   * @return {Promise}  returns a promise, if using promise api
   */
